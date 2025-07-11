@@ -72,7 +72,7 @@ app.get("/timewall-postback", async (req, res) => {
   }
 
   // CORREÇÃO: Usar a variável correta TIMEWALL
-  const hashEsperada = crypto.createHash("sha256").update(userID + revenueUSD + TIMEWALL_SECRET).digest("hex");
+  const hashEsperada = crypto.createHash("sha256").update(userID + revenueUSD + TIMEWALL).digest("hex");
  
   if (hashRecebido !== hashEsperada) {
   console.error("⛔ TimeWall hash inválida. Fórmula usada: transactionID + secret");
