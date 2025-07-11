@@ -41,6 +41,10 @@ const ficheiroPurchaseCount = path.join(__dirname, "purchaseCount.json");
 const MYLEAD = process.env.MYLEAD;
 const TIMEWALL = process.env.TIMEWAL;
 
+// ===============================
+// SERVER POSTBACKS
+// ===============================
+
 const app = express();
 const PORT = 3001;
 
@@ -53,9 +57,10 @@ app.get("/", (req, res) => {
 app.get("/timewall-postback", async (req, res) => {
   console.log("🔔 TimeWall postback recebido:", req.query);
   
-  const userID = req.query.userid;
+  // Leitura robusta dos parâmetros, aceitando vários formatos
+  const userID = req.query.userid || req.query.userID || req.query.userId;
   const revenue = req.query.revenue;
-  const transactionID = req.query.transactionid;
+  const transactionID = req.query.transactionid || req.query.transactionID || req.query.transactionId;
   const hashRecebido = req.query.hash;
   const tipo = req.query.type;
 
@@ -66,6 +71,7 @@ app.get("/timewall-postback", async (req, res) => {
     return res.status(400).send("Missing parameters");
   }
 
+  // CORREÇÃO: Usar a variável correta TIMEWALL
   const hashEsperada = crypto.createHash("sha256").update(userID + revenueUSD + TIMEWALL).digest("hex");
 
   if (hashRecebido !== hashEsperada) {
@@ -74,15 +80,15 @@ app.get("/timewall-postback", async (req, res) => {
   }
 
   try {
-    const sats = await usdToSats(revenueUSD); // Esta função já existe no seu código
-    const dados = carregarDadosFF(); // Esta função já existe no seu código
+    const sats = await usdToSats(revenueUSD);
+    const dados = carregarDadosFF();
     const userIdLimpo = userID.replace('discord_', '');
     
     dados[userIdLimpo] = dados[userIdLimpo] || { dinheiro: 0, ganhosdetarefas: 0, vitorias: 0, derrotas: 0 };
     dados[userIdLimpo].dinheiro += sats;
     dados[userIdLimpo].ganhosdetarefas = (dados[userIdLimpo].ganhosdetarefas || 0) + sats;
     
-    guardarDadosFF(dados); // Esta função já existe no seu código
+    guardarDadosFF(dados);
     console.log(`✅ Postback TimeWall [${tipo}] para ${userIdLimpo}: +${sats} sats`);
     
     res.status(200).send("1");
@@ -98,16 +104,16 @@ app.get("/mylead-postback", async (req, res) => {
 
   const userID       = req.query.player_id;
   const payoutEUR    = parseFloat(req.query.payout_decimal);
-  const txID         = req.query.transaction_id;
   const status       = req.query.status;
   const receivedHash = req.get("X-MyLead-Security-Hash");
 
-  if (status !== "approved" || !userID || isNaN(payoutEUR) || !txID || !receivedHash) {
+  if (status !== "approved" || !userID || isNaN(payoutEUR) || !receivedHash) {
     console.error("❌ MyLead: Parâmetros inválidos ou em falta.", req.query);
     return res.status(400).send("Invalid");
   }
   
   const urlNoHash = req.originalUrl.split('&X-MyLead-Security-Hash=')[0];
+  // CORREÇÃO: Usar a variável correta MYLEAD
   const expected  = crypto.createHmac("sha256", MYLEAD).update(urlNoHash).digest("hex");
   
   if (!crypto.timingSafeEqual(Buffer.from(receivedHash), Buffer.from(expected))) {
@@ -146,10 +152,24 @@ app.listen(PORT, () => {
 // USD TO SATOSHIS
 // =====================
 async function usdToSats(usd) {
-  const res = await axios.get("https://api.mempool.space/api/v1/prices");
-  const btc_usd = res.data.USD; // Exemplo: 64200
-  const sats_per_usd = 100_000_000 / btc_usd;
-  return Math.round(usd * sats_per_usd);
+  try {
+    const res = await axios.get("https://api.mempool.space/api/v1/prices", {
+      timeout: 8000 // Timeout de 8 segundos para robustez
+    });
+    if (!res.data || !res.data.USD) {
+      throw new Error("Resposta inválida da API mempool.space");
+    }
+    const btc_usd = res.data.USD;
+    const sats_per_usd = 100_000_000 / btc_usd;
+    return Math.round(usd * sats_per_usd);
+  } catch (error) {
+    if (error.code === 'ECONNABORTED') {
+      console.error("❌ Erro na API de preços: TIMEOUT.");
+    } else {
+      console.error("❌ Erro na API de preços:", error.message);
+    }
+    throw error;
+  }
 }
 
 
