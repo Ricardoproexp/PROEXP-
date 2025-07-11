@@ -39,7 +39,7 @@ const ficheiroPurchaseCount = path.join(__dirname, "purchaseCount.json");
 
 // Configurações e "Secrets" do Replit
 const MYLEAD = process.env.MYLEAD;
-const TIMEWALL = process.env.TIMEWAL;
+const TIMEWALL = process.env.TIMEWALL;
 
 // ===============================
 // SERVER POSTBACKS
@@ -72,7 +72,7 @@ app.get("/timewall-postback", async (req, res) => {
   }
 
   // CORREÇÃO: Usar a variável correta TIMEWALL
-  const hashEsperada = crypto.createHash("sha256").update(transactionID + TIMEWALL_SECRET).digest("hex");
+  const hashEsperada = crypto.createHash("sha256").update(transactionID + TIMEWALL).digest("hex");
  
   if (hashRecebido !== hashEsperada) {
   console.error("⛔ TimeWall hash inválida. Fórmula usada: transactionID + secret");
