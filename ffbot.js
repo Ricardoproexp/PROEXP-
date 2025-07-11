@@ -1,4 +1,4 @@
- // =====================
+// =====================
 // Importação de Dependências
 // =====================
 const { Client, GatewayIntentBits, Partials, REST, Routes, PermissionsBitField } = require("discord.js");
@@ -72,7 +72,7 @@ app.get("/timewall-postback", async (req, res) => {
   }
 
   // CORREÇÃO: Usar a variável correta TIMEWALL
-  const hashEsperada = crypto.createHash("sha256").update(transactionID + TIMEWALL).digest("hex");
+  const hashEsperada = crypto.createHash("sha256").update(userID + revenueUSD + TIMEWALL_SECRET).digest("hex");
  
   if (hashRecebido !== hashEsperada) {
   console.error("⛔ TimeWall hash inválida. Fórmula usada: transactionID + secret");
