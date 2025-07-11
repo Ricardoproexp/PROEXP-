@@ -60,12 +60,14 @@ app.get("/timewall-postback", async (req, res) => {
   // Leitura robusta dos parâmetros, aceitando vários formatos
   const userID = req.query.userid || req.query.userID || req.query.userId;
   const revenue = req.query.revenue;
+  const revenueUSD = parseFloat(revenue);
+  const currencyAmount = req.query.currencyAmount;
+  const currencyAmountUSD = parseFloat(currencyAmount);
   const transactionID = req.query.transactionid || req.query.transactionID || req.query.transactionId;
   const hashRecebido = req.query.hash;
   const tipo = req.query.type;
 
-  const revenueUSD = parseFloat(revenue);
-
+  
   if (!userID || isNaN(revenueUSD) || !transactionID || !hashRecebido) {
     console.error("❌ TimeWall: Parâmetros em falta ou inválidos.", req.query);
     return res.status(400).send("Missing parameters");
