@@ -94,6 +94,16 @@ app.get("/timewall-postback", async (req, res) => {
     
     guardarDadosFF(dados);
     console.log(`✅ Postback TimeWall [${tipo}] para ${userIdLimpo}: +${sats} sats`);
+
+    try {
+    const user = await client.users.fetch(userIdLimpo);
+    if (user) {
+        await user.send(`🎉 Você recebeu uma recompensa! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.`);
+        console.log(`📨 Notificação por DM enviada com sucesso para ${userIdLimpo}.`);
+    }    
+  } catch (dmError) {
+    console.warn(`⚠️ Não foi possível enviar a DM de notificação para o utilizador ${userIdLimpo}. Motivo: ${dmError.message}`);
+    }
     
     res.status(200).send("1");
   } catch (err) {
