@@ -1,0 +1,27 @@
+{
+  "1": {
+    "nome": "100 + 10 💎 FF",
+    "preco_usd": 1.3,
+    "quantidade": null
+  },
+  "2": {
+    "nome": "210 + 21 💎 FF",
+    "preco_usd": 2.6,
+    "quantidade": null
+  },
+  "3": {
+    "nome": "530 + 53 💎 FF",
+    "preco_usd": 6.5,
+    "quantidade": null
+  },
+  "4": {
+    "nome": "1080 + 108 💎 FF",
+    "preco_usd": 13,
+    "quantidade": null
+  },
+  "5": {
+    "nome": "2200 + 220 💎 FF",
+    "preco_usd": 26,
+    "quantidade": null
+  }
+}
