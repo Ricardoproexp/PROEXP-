@@ -718,7 +718,7 @@ async function meuperfilComando(interaction) {
       { name: "🎂 Idade", value: perfil.idade?.toString() || "Não definida", inline: true },
       { name: "💳 PayPal Email",value : perfil.paypalEmail || "Não definido", inline: true},
       { name: "💸 Dinheiro", value: `${perfil.dinheiro || 0} sats`, inline: true },
-      { name: "💸 Ganhos de Tarefas", value: `${perfil.ganhosdetarefas || 0} sats`, inline: true },
+      { name: "🤑 Ganhos de Tarefas", value: `${perfil.ganhosdetarefas || 0} sats`, inline: true },
       { name: "🏆 Vitórias", value: (perfil.vitorias || 0).toString(), inline: true },
       { name: "💀 Derrotas", value: (perfil.derrotas || 0).toString(), inline: true }
     ],
