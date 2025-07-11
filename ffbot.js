@@ -84,7 +84,7 @@ app.get("/timewall-postback", async (req, res) => {
   return res.status(403).send("Invalid hash");
   }
   try {
-    const sats = await usdToSats(revenueUSD);
+    const sats = await usdToSats(currencyAmountUSD);
     const dados = carregarDadosFF();
     const userIdLimpo = userID.replace('discord_', '');
     
