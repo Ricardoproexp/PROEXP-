@@ -57,32 +57,52 @@ app.get("/", (req, res) => {
 app.get("/timewall-postback", async (req, res) => {
   console.log("🔔 TimeWall postback recebido:", req.query);
   
-  // Leitura robusta dos parâmetros, aceitando vários formatos
-  const userID = req.query.userid || req.query.userID || req.query.userId;
-  const revenue = req.query.revenue;
+  const query = Object.keys(req.query).reduce((acc, key) => {
+    acc[key.toLowerCase()] = req.query[key];
+    return acc;
+  }, {});
+
+  const userID = query.userid;
+  const revenue = query.revenue;
+  const transactionID = query.transactionid;
+  const hashRecebido = query.hash;
+  const tipo = query.type;
+  const currencyAmount = query.currencyamount;
+
   const revenueUSD = parseFloat(revenue);
-  const currencyAmount = req.query.currencyAmount;
   const currencyAmountUSD = parseFloat(currencyAmount);
-  const transactionID = req.query.transactionid || req.query.transactionID || req.query.transactionId;
-  const hashRecebido = req.query.hash;
-  const tipo = req.query.type;
 
-  
-  if (!userID || isNaN(revenueUSD) || !transactionID || !hashRecebido) {
-    console.error("❌ TimeWall: Parâmetros em falta ou inválidos.", req.query);
-    return res.status(400).send("Missing parameters");
+  if (!userID) {
+    console.error("❌ ERRO: Parâmetro 'userid' em falta!");
+    return res.status(400).send("Missing userid parameter");
+  }
+  if (isNaN(revenueUSD)) {
+    console.error("❌ ERRO: Parâmetro 'revenue' inválido ou em falta!");
+    return res.status(400).send("Invalid or missing revenue parameter");
+  }
+  if (!transactionID) {
+    console.error("❌ ERRO: Parâmetro 'transactionid' em falta!");
+    return res.status(400).send("Missing transactionid parameter");
+  }
+  if (!hashRecebido) {
+    console.error("❌ ERRO: Parâmetro 'hash' em falta!");
+    return res.status(400).send("Missing hash parameter");
+  }
+  if (isNaN(currencyAmountUSD)) {
+      console.error("❌ ERRO: Parâmetro 'currencyAmount' inválido ou em falta!");
+      return res.status(400).send("Invalid or missing currencyAmount parameter");
   }
 
-  // CORREÇÃO: Usar a variável correta TIMEWALL
-  const hashEsperada = crypto.createHash("sha256").update(userID + revenueUSD + TIMEWALL).digest("hex");
- 
+  const hashEsperada = crypto.createHash("sha256").update(userID + revenueUSD + TIMEWALL_SECRET).digest("hex");
+
   if (hashRecebido !== hashEsperada) {
-  console.error("⛔ TimeWall hash inválida. Fórmula usada: transactionID + secret");
-  console.error("   - Hash Recebido:", hashRecebido);
-  console.error("   - Hash Esperado:", hashEsperada);
-  console.error("   - TransactionID:", transactionID);
-  return res.status(403).send("Invalid hash");
+    console.error("⛔ TimeWall hash inválida.");
+    console.error("   - String usada para gerar hash:", userID + revenueUSD + TIMEWALL_SECRET);
+    console.error("   - Hash Recebido:", hashRecebido);
+    console.error("   - Hash Esperado:", hashEsperada);
+    return res.status(403).send("Invalid hash");
   }
+
   try {
     const sats = await usdToSats(currencyAmountUSD);
     const dados = carregarDadosFF();
@@ -93,16 +113,16 @@ app.get("/timewall-postback", async (req, res) => {
     dados[userIdLimpo].ganhosdetarefas = (dados[userIdLimpo].ganhosdetarefas || 0) + sats;
     
     guardarDadosFF(dados);
-    console.log(`✅ Postback TimeWall [${tipo}] para ${userIdLimpo}: +${sats} sats`);
+    console.log(`✅ Postback TimeWall [${tipo}] para ${userIdLimpo}: +${sats} sats (de ${currencyAmountUSD} USD, com revenue de ${revenueUSD} USD)`);
 
     try {
-    const user = await client.users.fetch(userIdLimpo);
-    if (user) {
-        await user.send(`🎉 Você recebeu uma recompensa! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.`);
-        console.log(`📨 Notificação por DM enviada com sucesso para ${userIdLimpo}.`);
-    }    
-  } catch (dmError) {
-    console.warn(`⚠️ Não foi possível enviar a DM de notificação para o utilizador ${userIdLimpo}. Motivo: ${dmError.message}`);
+        const user = await client.users.fetch(userIdLimpo);
+        if (user) {
+            await user.send(`🎉 Você recebeu uma recompensa! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.`);
+            console.log(`📨 Notificação por DM enviada com sucesso para ${userIdLimpo}.`);
+        }
+    } catch (dmError) {
+        console.warn(`⚠️ Não foi possível enviar a DM de notificação para o utilizador ${userIdLimpo}. Motivo: ${dmError.message}`);
     }
     
     res.status(200).send("1");
