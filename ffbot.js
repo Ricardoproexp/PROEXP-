@@ -63,45 +63,49 @@ app.get("/timewall-postback", async (req, res) => {
   }, {});
 
   const userID = query.userid;
-  const revenue = query.revenue;
+  const revenueStr = query.revenue;
   const transactionID = query.transactionid;
   const hashRecebido = query.hash;
+  const currencyAmountStr = query.currencyamount;
   const tipo = query.type;
-  const currencyAmount = query.currencyamount;
-  const revenueUSD = parseFloat(revenue);
-  const currencyAmountUSD = parseFloat(currencyAmount);
-
-  if (!userID) {
-    console.error("❌ ERRO: Parâmetro 'userid' em falta!");
-    return res.status(400).send("Missing userid parameter");
-  }
-  if (isNaN(revenueUSD)) {
-    console.error("❌ ERRO: Parâmetro 'revenue' inválido ou em falta!");
-    return res.status(400).send("Invalid or missing revenue parameter");
-  }
-  if (!transactionID) {
-    console.error("❌ ERRO: Parâmetro 'transactionid' em falta!");
-    return res.status(400).send("Missing transactionid parameter");
-  }
-  if (!hashRecebido) {
-    console.error("❌ ERRO: Parâmetro 'hash' em falta!");
-    return res.status(400).send("Missing hash parameter");
-  }
-  if (isNaN(currencyAmountUSD)) {
-      console.error("❌ ERRO: Parâmetro 'currencyAmount' inválido ou em falta!");
-      return res.status(400).send("Invalid or missing currencyAmount parameter");
-  }
-
-  const hashEsperada = crypto.createHash("sha256").update(userID + revenueUSD + TIMEWALL).digest("hex");
- 
-  if (hashRecebido !== hashEsperada) {
-  console.error("⛔ TimeWall hash inválida. Fórmula usada: transactionID + secret");
-  console.error("   - Hash Recebido:", hashRecebido);
-  console.error("   - Hash Esperado:", hashEsperada);
-  console.error("   - TransactionID:", transactionID);
-  return res.status(403).send("Invalid hash");
-  }
   
+  if (!userID || !revenueStr || !transactionID || !hashRecebido || !currencyAmountStr) {
+    return res.status(400).send("Missing parameters");
+  }
+
+  const revenueUSD = parseFloat(revenueStr);
+  const currencyAmountUSD = parseFloat(currencyAmountStr);
+
+  const formulas = {
+    "Documentação (revenue como string)": userID + revenueStr + TIMEWALL,
+    "Documentação (revenue como número)": userID + revenueUSD + TIMEWALL,
+    "Transação (mais simples)": transactionID + TIMEWALL,
+    "UserID + Transação": userID + transactionID + TIMEWALL
+  };
+
+  let formulaCorreta = null;
+  
+  console.log("--- DEBUG DE HASH ---");
+  console.log("Hash Recebido da TimeWall:", hashRecebido);
+  
+  for (const [nome, str] of Object.entries(formulas)) {
+    const hashGerado = crypto.createHash("sha256").update(str).digest("hex");
+    console.log(`Testando fórmula "${nome}":`);
+    console.log(`  - String: ${str}`);
+    console.log(`  - Hash Gerado: ${hashGerado}`);
+    if (hashGerado === hashRecebido) {
+      console.log(`✅ SUCESSO! Fórmula encontrada: "${nome}"`);
+      formulaCorreta = nome;
+      break; 
+    }
+  }
+  console.log("---------------------");
+
+  if (!formulaCorreta) {
+    console.error("⛔ Nenhuma fórmula de hash correspondeu. Verifique a Secret Key e a ordem dos parâmetros.");
+    return res.status(403).send("Invalid hash");
+  }
+
   try {
     const sats = await usdToSats(currencyAmountUSD);
     const dados = carregarDadosFF();
@@ -112,8 +116,8 @@ app.get("/timewall-postback", async (req, res) => {
     dados[userIdLimpo].ganhosdetarefas = (dados[userIdLimpo].ganhosdetarefas || 0) + sats;
     
     guardarDadosFF(dados);
-    console.log(`✅ Postback TimeWall [${tipo}] para ${userIdLimpo}: +${sats} sats (de ${currencyAmountUSD} USD, com revenue de ${revenueUSD} USD)`);
-
+    console.log(`✅ Postback processado para ${userIdLimpo}: +${sats} sats`);
+    
     try {
         const user = await client.users.fetch(userIdLimpo);
         if (user) {
@@ -126,7 +130,7 @@ app.get("/timewall-postback", async (req, res) => {
     
     res.status(200).send("1");
   } catch (err) {
-    console.error("❌ Erro ao processar o postback da TimeWall:", err.message);
+    console.error("❌ Erro ao processar o postback:", err.message);
     res.status(500).send("Processing error");
   }
 });
