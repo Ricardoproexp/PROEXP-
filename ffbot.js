@@ -68,7 +68,6 @@ app.get("/timewall-postback", async (req, res) => {
   const hashRecebido = query.hash;
   const tipo = query.type;
   const currencyAmount = query.currencyamount;
-
   const revenueUSD = parseFloat(revenue);
   const currencyAmountUSD = parseFloat(currencyAmount);
 
@@ -93,11 +92,11 @@ app.get("/timewall-postback", async (req, res) => {
       return res.status(400).send("Invalid or missing currencyAmount parameter");
   }
 
-  const hashEsperada = crypto.createHash("sha256").update(userID + revenueUSD + TIMEWALL_SECRET).digest("hex");
+  const hashEsperada = crypto.createHash("sha256").update(userID + revenueUSD + TIMEWALL).digest("hex");
 
   if (hashRecebido !== hashEsperada) {
     console.error("⛔ TimeWall hash inválida.");
-    console.error("   - String usada para gerar hash:", userID + revenueUSD + TIMEWALL_SECRET);
+    console.error("   - String usada para gerar hash:", userID + revenueUSD + TIMEWALL);
     console.error("   - Hash Recebido:", hashRecebido);
     console.error("   - Hash Esperado:", hashEsperada);
     return res.status(403).send("Invalid hash");
