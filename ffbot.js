@@ -92,13 +92,13 @@ app.get("/timewall-postback", async (req, res) => {
       return res.status(400).send("Invalid or missing currencyAmount parameter");
   }
 
-  const hashEsperada = crypto.createHash("sha256").update(transactionID + TIMEWALL).digest("hex");
-  
+  const hashEsperada = crypto.createHash("sha256").update(userID + revenueUSD + TIMEWALL).digest("hex");
+ 
   if (hashRecebido !== hashEsperada) {
   console.error("⛔ TimeWall hash inválida. Fórmula usada: transactionID + secret");
-  console.error("   - String usada para gerar hash:", transactionID + TIMEWALL);
   console.error("   - Hash Recebido:", hashRecebido);
   console.error("   - Hash Esperado:", hashEsperada);
+  console.error("   - TransactionID:", transactionID);
   return res.status(403).send("Invalid hash");
   }
   
