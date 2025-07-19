@@ -57,55 +57,32 @@ app.get("/", (req, res) => {
 app.get("/timewall-postback", async (req, res) => {
   console.log("🔔 TimeWall postback recebido:", req.query);
   
-  const query = Object.keys(req.query).reduce((acc, key) => {
-    acc[key.toLowerCase()] = req.query[key];
-    return acc;
-  }, {});
+  // Leitura robusta dos parâmetros, aceitando vários formatos
+  const userID = req.query.userid || req.query.userID || req.query.userId;
+  const revenue = req.query.revenue;
+  const revenueUSD = parseFloat(revenue);
+  const currencyAmount = req.query.currencyAmount;
+  const currencyAmountUSD = parseFloat(currencyAmount);
+  const transactionID = req.query.transactionid || req.query.transactionID || req.query.transactionId;
+  const hashRecebido = req.query.hash;
+  const tipo = req.query.type;
 
-  const userID = query.userid;
-  const revenueStr = query.revenue;
-  const transactionID = query.transactionid;
-  const hashRecebido = query.hash;
-  const currencyAmountStr = query.currencyamount;
-  const tipo = query.type;
   
-  if (!userID || !revenueStr || !transactionID || !hashRecebido || !currencyAmountStr) {
+  if (!userID || isNaN(revenueUSD) || !transactionID || !hashRecebido) {
+    console.error("❌ TimeWall: Parâmetros em falta ou inválidos.", req.query);
     return res.status(400).send("Missing parameters");
   }
 
-  const revenueUSD = parseFloat(revenueStr);
-  const currencyAmountUSD = parseFloat(currencyAmountStr);
-
-  const formulas = {
-    "Documentação (revenue como string)": userID + revenueStr + TIMEWALL,
-    "Documentação (revenue como número)": userID + revenueUSD + TIMEWALL,
-    "Transação (mais simples)": transactionID + TIMEWALL,
-    "UserID + Transação": userID + transactionID + TIMEWALL
-  };
-
-  let formulaCorreta = null;
-  
-  console.log("--- DEBUG DE HASH ---");
-  console.log("Hash Recebido da TimeWall:", hashRecebido);
-  
-  for (const [nome, str] of Object.entries(formulas)) {
-    const hashGerado = crypto.createHash("sha256").update(str).digest("hex");
-    console.log(`Testando fórmula "${nome}":`);
-    console.log(`  - String: ${str}`);
-    console.log(`  - Hash Gerado: ${hashGerado}`);
-    if (hashGerado === hashRecebido) {
-      console.log(`✅ SUCESSO! Fórmula encontrada: "${nome}"`);
-      formulaCorreta = nome;
-      break; 
-    }
+  // CORREÇÃO: Usar a variável correta TIMEWALL
+  const hashEsperada = crypto.createHash("sha256").update(userID + revenueUSD + TIMEWALL).digest("hex");
+ 
+  if (hashRecebido !== hashEsperada) {
+  console.error("⛔ TimeWall hash inválida. Fórmula usada: transactionID + secret");
+  console.error("   - Hash Recebido:", hashRecebido);
+  console.error("   - Hash Esperado:", hashEsperada);
+  console.error("   - TransactionID:", transactionID);
+  return res.status(403).send("Invalid hash");
   }
-  console.log("---------------------");
-
-  if (!formulaCorreta) {
-    console.error("⛔ Nenhuma fórmula de hash correspondeu. Verifique a Secret Key e a ordem dos parâmetros.");
-    return res.status(403).send("Invalid hash");
-  }
-
   try {
     const sats = await usdToSats(currencyAmountUSD);
     const dados = carregarDadosFF();
@@ -116,22 +93,33 @@ app.get("/timewall-postback", async (req, res) => {
     dados[userIdLimpo].ganhosdetarefas = (dados[userIdLimpo].ganhosdetarefas || 0) + sats;
     
     guardarDadosFF(dados);
-    console.log(`✅ Postback processado para ${userIdLimpo}: +${sats} sats`);
-    
+    console.log(`✅ Postback TimeWall [${tipo}] para ${userIdLimpo}: +${sats} sats`);
+
+    const definicoes = carregarDefinicoes();
     try {
-        const user = await client.users.fetch(userIdLimpo);
-        if (user) {
-            await user.send(`🎉 Você recebeu uma recompensa! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.`);
-            console.log(`📨 Notificação por DM enviada com sucesso para ${userIdLimpo}.`);
+    const user = await client.users.fetch(userIdLimpo);
+    if (user) {
+        await user.send(`🎉 Você recebeu uma recompensa! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.`);
+        console.log(`📨 Notificação por DM enviada com sucesso para ${userIdLimpo}.`);
+    }    
+
+    if (definicoes.canalOfertas) {
+      try {
+        const offersChan = await client.channels.fetch(definicoes.canalOfertas);
+        if (offersChan?.isTextBased()) {
+          offersChan.send(
+            `🎉 <@${userIdLimpo}> recebeu **+${sats} sats** na TimeWall!`
+          );
         }
-    } catch (dmError) {
-        console.warn(`⚠️ Não foi possível enviar a DM de notificação para o utilizador ${userIdLimpo}. Motivo: ${dmError.message}`);
+      } catch (err) {
+        console.error("⚠️ Erro ao notificar canal de ofertas:", err);
+      }
     }
-    
-    res.status(200).send("1");
+
+    return res.status(200).send("1");
   } catch (err) {
-    console.error("❌ Erro ao processar o postback:", err.message);
-    res.status(500).send("Processing error");
+    console.error("❌ Erro ao processar o postback da TimeWall:", err.message);
+    return res.status(500).send("Processing error");
   }
 });
 
@@ -182,6 +170,7 @@ app.get("/mylead-postback", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Servidor de Postbacks está online na porta ${PORT}`);
 });
+
 
 
 
@@ -1015,6 +1004,19 @@ async function adscComando(interaction) {
     definicoes.canalAds = interaction.channel.id;
     guardarDefinicoes();
     interaction.reply({ content: `✅ Canal de anúncios definido para: <#${interaction.channel.id}>` });
+}
+
+// Comando: /oftc
+async function oftcComando(interaction) {
+    if (!interaction.guild) {
+        return interaction.reply({ content: "❌ Este comando só pode ser usado num servidor.", ephemeral: true });
+    }
+    if (interaction.user.id !== interaction.guild.ownerId && (!definicoes.idCargoAdmin || !interaction.member.roles.cache.has(definicoes.idCargoAdmin))) {
+        return interaction.reply({ content: "❌ Não tem permissão para usar este comando.", ephemeral: true });
+    }
+    definicoes.canalOfertas = interaction.channel.id;
+    guardarDefinicoes();
+    interaction.reply({ content: `✅ Canal de recompensas de ofertas recebidas definido para: <#${interaction.channel.id}>` });
 }
 
 // Comando: /dptc
@@ -1860,6 +1862,10 @@ const comandosData = [
         ],
     },
     {
+        name: "oftc",
+        description: "(Admin).",
+    },
+    {
         name: "adsc",
         description: "(Admin).",
     },
@@ -2144,7 +2150,9 @@ client.on("interactionCreate", async (interaction) => {
             const utilizadorAlvo = options.getUser("utilizador");
             const valor = options.getInteger("valor");
             await moneyComando(interaction, utilizadorAlvo, valor);
-        } else if (commandName === "adsc") {
+        } else if (commandName === "oftc") 
+            await oftcComando(interaction);
+        } else if (commandName === "adsc") 
             await adscComando(interaction);
         } else if (commandName === "dptc") {
             await dptcComando(interaction);
