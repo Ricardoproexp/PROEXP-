@@ -101,9 +101,8 @@ app.get("/timewall-postback", async (req, res) => {
     if (user) {
         await user.send(`🎉 Você recebeu uma recompensa! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.`);
         console.log(`📨 Notificação por DM enviada com sucesso para ${userIdLimpo}.`);
-    }    
-
-    if (definicoes.canalOfertas) {
+    } 
+  } if (definicoes.canalOfertas) {
       try {
         const offersChan = await client.channels.fetch(definicoes.canalOfertas);
         if (offersChan?.isTextBased()) {
