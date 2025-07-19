@@ -2153,9 +2153,9 @@ client.on("interactionCreate", async (interaction) => {
             const utilizadorAlvo = options.getUser("utilizador");
             const valor = options.getInteger("valor");
             await moneyComando(interaction, utilizadorAlvo, valor);
-        } else if (commandName === "oftc") 
+        } else if (commandName === "oftc") {
             await oftcComando(interaction);
-        } else if (commandName === "adsc") 
+        } else if (commandName === "adsc") {
             await adscComando(interaction);
         } else if (commandName === "dptc") {
             await dptcComando(interaction);
