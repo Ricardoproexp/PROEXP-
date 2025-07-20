@@ -105,11 +105,9 @@ app.get("/timewall-postback", async (req, res) => {
     
     if (definicoes.canalOfertas) {
       try {
-        const offersChan = await client.channels.fetch(definicoes.canalOfertas);
-        if (offersChan?.isTextBased()) {
-          offersChan.send(
-            `🎉 <@${userIdLimpo}> recebeu **+${sats} sats** na TimeWall!`
-          );
+        const canalOfertas = await client.channels.fetch(definicoes.canalOfertas);      
+        if (canalOfertas?.isTextBased()) {
+          canalOfertas.send(`🎉 <@${userIdLimpo}> recebeu **+${sats} sats** na TimeWall!`);
         }
       } catch (err) {
         console.error("⚠️ Erro ao notificar canal de ofertas:", err);
