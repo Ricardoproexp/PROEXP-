@@ -41,9 +41,6 @@ const ficheiroPurchaseCount = path.join(__dirname, "purchaseCount.json");
 const MYLEAD = process.env.MYLEAD;
 const TIMEWALL = process.env.TIMEWALL;
 
-// ===============================
-// SERVER POSTBACKS
-// ===============================
 
 const app = express();
 const PORT = 3001;
@@ -97,15 +94,15 @@ app.get("/timewall-postback", async (req, res) => {
 
     const definicoes = carregarDefinicoes();
     try {
-    const user = await client.users.fetch(userIdLimpo);
-    if (user) {
+      const user = await client.users.fetch(userIdLimpo);
+      if (user) {
         await user.send(`🎉 Você recebeu uma recompensa! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.`);
         console.log(`📨 Notificação por DM enviada com sucesso para ${userIdLimpo}.`);
-    } 
-  } catch (dmError) {
-    console.warn(`⚠️ Não foi possível enviar a DM de notificação para o utilizador ${userIdLimpo}. Motivo: ${dmError.message}`);
-    }        
-
+      } 
+   } catch (dmError) { 
+      console.warn(`⚠️ Não foi possível enviar a DM de notificação para o utilizador ${userIdLimpo}. Motivo: ${dmError.message}`);
+    }   
+    
     if (definicoes.canalOfertas) {
       try {
         const offersChan = await client.channels.fetch(definicoes.canalOfertas);
@@ -118,7 +115,6 @@ app.get("/timewall-postback", async (req, res) => {
         console.error("⚠️ Erro ao notificar canal de ofertas:", err);
       }
     }
-
     return res.status(200).send("1");
   } catch (err) {
     console.error("❌ Erro ao processar o postback da TimeWall:", err.message);
