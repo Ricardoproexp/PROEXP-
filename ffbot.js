@@ -81,44 +81,44 @@ app.get("/timewall-postback", async (req, res) => {
   return res.status(403).send("Invalid hash");
   }
   try {
-    const sats = await usdToSats(currencyAmountUSD);
-    const dados = carregarDadosFF();
-    const userIdLimpo = userID.replace('discord_', '');
-    
-    dados[userIdLimpo] = dados[userIdLimpo] || { dinheiro: 0, ganhosdetarefas: 0, vitorias: 0, derrotas: 0 };
-    dados[userIdLimpo].dinheiro += sats;
-    dados[userIdLimpo].ganhosdetarefas = (dados[userIdLimpo].ganhosdetarefas || 0) + sats;
-    
-    guardarDadosFF(dados);
-    console.log(`✅ Postback TimeWall [${tipo}] para ${userIdLimpo}: +${sats} sats`);
+  const sats = await usdToSats(currencyAmountUSD);
+  const dados = carregarDadosFF();
+  const userIdLimpo = (userID || "").replace("discord_", "");
 
-    const definicoes = carregarDefinicoes();
-    try {
-      const user = await client.users.fetch(userIdLimpo);
-      if (user) {
-        await user.send(`🎉 Você recebeu uma recompensa! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.`);
-        console.log(`📨 Notificação por DM enviada com sucesso para ${userIdLimpo}.`);
-      } 
-   } catch (dmError) { 
-      console.warn(`⚠️ Não foi possível enviar a DM de notificação para o utilizador ${userIdLimpo}. Motivo: ${dmError.message}`);
-    }   
-    
+  dados[userIdLimpo].dinheiro += sats;
+  dados[userIdLimpo].ganhosdetarefas += sats;
+  guardarDadosFF(dados);
+  console.log(`✅ Postback TimeWall [${tipo}] para ${userIdLimpo}: +${sats} sats`);
+
+  try {
+    const user = await client.users.fetch(userIdLimpo);
+    if (user) {
+      await user.send(`🎉 Você recebeu uma recompensa! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.`);
+      console.log(`📨 DM enviada com sucesso para ${userIdLimpo}`);
+    }
+  } catch (dmError) {
+    console.warn(`⚠️ Não foi possível enviar DM para ${userIdLimpo}: ${dmError.message}`);
+  }
+
+  try {
+    definicoes = carregarDefinicoes();
     if (definicoes.canalOfertas) {
-      try {
-        const canalOfertas = await client.channels.fetch(definicoes.canalOfertas);      
-        if (canalOfertas?.isTextBased()) {
-          canalOfertas.send(`🎉 <@${userIdLimpo}> recebeu **+${sats} sats** na TimeWall!`);
-        }
-      } catch (err) {
-        console.error("⚠️ Erro ao notificar canal de ofertas:", err);
+      const canalOfertas = await client.channels.fetch(definicoes.canalOfertas);
+      if (canalOfertas?.isTextBased()) {
+        await canal.send(`🎉 <@${userIdLimpo}> recebeu **+${sats} sats** do TimeWall!`);
+        console.log(`📢 Mensagem enviada para o canal de ofertas`);
       }
     }
-    return res.status(200).send("1");
-  } catch (err) {
-    console.error("❌ Erro ao processar o postback da TimeWall:", err.message);
-    return res.status(500).send("Processing error");
+  } catch (canalError) {
+    console.warn("⚠️ Erro ao enviar no canal de ofertas:", canalError.message);
+  }
+  return res.status(200).send("1");
+} catch (err) {
+  console.error("❌ Erro ao processar o postback da TimeWall:", err);
+  return res.status(500).send("Processing error");
   }
 });
+  
 
 // ——————— MyLead Postback Webhook ———————
 app.get("/mylead-postback", async (req, res) => {
