@@ -91,7 +91,7 @@ app.get("/timewall-postback", async (req, res) => {
   try {
     const user = await client.users.fetch(userIdLimpo);
     if (user) {
-      await user.send(`🎉 Você recebeu uma recompensa! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.`);
+      await user.send(`🎉 Você recebeu a sua recompensa da TimeWall! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.`);
       console.log(`📨 DM enviada com sucesso para ${userIdLimpo}`);
     }
   } catch (dmError) {
@@ -102,7 +102,7 @@ app.get("/timewall-postback", async (req, res) => {
     if (definicoes.canalOfertas) {
       const canalOfertas = await client.channels.fetch(definicoes.canalOfertas);
       if (canalOfertas?.isTextBased()) {
-        await canal.send(`🎉 <@${userIdLimpo}> recebeu **+${sats} sats** do TimeWall!`);
+        await canalOfertas.send(`🎉 <@${userIdLimpo}> recebeu **+${sats} sats** do TimeWall!`);
         console.log(`📢 Mensagem enviada para o canal de ofertas`);
       }
     }
