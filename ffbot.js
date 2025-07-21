@@ -45,7 +45,7 @@ const TIMEWALL = process.env.TIMEWALL;
 const app = express();
 const PORT = 3001;
 
-// Rota principal para UptimeRobot e testes manuais
+// Mensagem no site
 app.get("/", (req, res) => {
   res.status(200).send("Bot e Servidor de Postbacks estão online!");
 });
@@ -54,7 +54,6 @@ app.get("/", (req, res) => {
 app.get("/timewall-postback", async (req, res) => {
   console.log("🔔 TimeWall postback recebido:", req.query);
   
-  // Leitura robusta dos parâmetros, aceitando vários formatos
   const userID = req.query.userid || req.query.userID || req.query.userId;
   const revenue = req.query.revenue;
   const revenueUSD = parseFloat(revenue);
@@ -70,7 +69,6 @@ app.get("/timewall-postback", async (req, res) => {
     return res.status(400).send("Missing parameters");
   }
 
-  // CORREÇÃO: Usar a variável correta TIMEWALL
   const hashEsperada = crypto.createHash("sha256").update(userID + revenueUSD + TIMEWALL).digest("hex");
  
   if (hashRecebido !== hashEsperada) {
@@ -101,7 +99,6 @@ app.get("/timewall-postback", async (req, res) => {
   }
 
   try {
-    definicoes = carregarDefinicoes();
     if (definicoes.canalOfertas) {
       const canalOfertas = await client.channels.fetch(definicoes.canalOfertas);
       if (canalOfertas?.isTextBased()) {
@@ -116,49 +113,6 @@ app.get("/timewall-postback", async (req, res) => {
 } catch (err) {
   console.error("❌ Erro ao processar o postback da TimeWall:", err);
   return res.status(500).send("Processing error");
-  }
-});
-  
-
-// ——————— MyLead Postback Webhook ———————
-app.get("/mylead-postback", async (req, res) => {
-  console.log("🔔 MyLead postback recebido:", req.query);
-
-  const userID       = req.query.player_id;
-  const payoutEUR    = parseFloat(req.query.payout_decimal);
-  const status       = req.query.status;
-  const receivedHash = req.get("X-MyLead-Security-Hash");
-
-  if (status !== "approved" || !userID || isNaN(payoutEUR) || !receivedHash) {
-    console.error("❌ MyLead: Parâmetros inválidos ou em falta.", req.query);
-    return res.status(400).send("Invalid");
-  }
-  
-  const urlNoHash = req.originalUrl.split('&X-MyLead-Security-Hash=')[0];
-  // CORREÇÃO: Usar a variável correta MYLEAD
-  const expected  = crypto.createHmac("sha256", MYLEAD).update(urlNoHash).digest("hex");
-  
-  if (!crypto.timingSafeEqual(Buffer.from(receivedHash), Buffer.from(expected))) {
-    console.error("⛔ MyLead Hash mismatch", { recebido: receivedHash, esperado: expected });
-    return res.status(403).send("Forbidden");
-  }
-
-  const payoutUSD = 1.15 * payoutEUR;
-  try {
-    const creditSats = await usdToSats(payoutUSD);
-    const dados = carregarDadosFF();
-    
-    dados[userID] = dados[userID] || { dinheiro: 0, vitorias: 0, derrotas: 0, ganhosdetarefas: 0 };
-    dados[userID].dinheiro += creditSats;
-    dados[userID].ganhosdetarefas = (dados[userID].ganhosdetarefas || 0) + creditSats;
-
-    guardarDadosFF(dados);
-    console.log(`✅ MyLead lead aprovada para ${userID}: +${creditSats} sats (EUR ${payoutEUR})`);
-    
-    res.status(200).send("OK");
-  } catch (err) {
-    console.error("❌ Erro ao processar o postback da MyLead:", err.message);
-    res.status(500).send("Processing error");
   }
 });
 
@@ -820,9 +774,11 @@ async function depositarComando(interaction, valor) {
 // Comando: /ganhar
 async function ganharComando(interaction) {
   const userId = interaction.user.id;
-
-  // MyLead
-  const myLeadLink = `https://reward-me.eu/032b7c8a-56cd-11f0-86cf-c2a106037d45?player_id=${userId}`;
+  const perfil = dados[userId];
+  
+  if (!perfil || !perfil.idff) {
+    return interaction.reply({content: "❌ Ainda não estás registado. Usa `/registar` para te registares.",ephemeral: true});
+  }
 
   // TimeWall
   const timeWallLink = `https://timewall.io/users/login?oid=11c905fcbd5a020b&uid=discord_${userId}&tab=tasks`;
@@ -831,7 +787,6 @@ async function ganharComando(interaction) {
     title: "🎁 Ganhe Sats com Ofertas",
     description:
       `Clique em uma das plataformas abaixo para completar tarefas e ganhar recompensas automáticas no Discord:\n\n` +
-      `🧩 **[MyLead Offerwall](<${myLeadLink}>)**\n\n` +
       `🎯 **[TimeWall Ofertas](<${timeWallLink}>)**`,
     color: 0x00AEFF,
     footer: {
