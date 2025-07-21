@@ -774,6 +774,7 @@ async function depositarComando(interaction, valor) {
 // Comando: /ganhar
 async function ganharComando(interaction) {
   const userId = interaction.user.id;
+  const dados = carregarDadosFF();
   const perfil = dados[userId];
   
   if (!perfil || !perfil.idff) {
