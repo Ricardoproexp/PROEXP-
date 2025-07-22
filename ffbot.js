@@ -103,7 +103,7 @@ app.get("/timewall-postback", async (req, res) => {
     }
 
   try {
-    if (definicoes.canalOfertas & tipo === "credit") {
+    if (definicoes.canalOfertas && tipo === "credit") {
       const canalOfertas = await client.channels.fetch(definicoes.canalOfertas);
       if (canalOfertas?.isTextBased()) {
         await canalOfertas.send(`🎉 <@${userIdLimpo}> recebeu **+${sats} sats** do TimeWall!`);
