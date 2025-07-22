@@ -91,15 +91,19 @@ app.get("/timewall-postback", async (req, res) => {
   try {
     const user = await client.users.fetch(userIdLimpo);
     if (user) {
-      await user.send(`🎉 Você recebeu a sua recompensa da TimeWall! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.`);
-      console.log(`📨 DM enviada com sucesso para ${userIdLimpo}`);
+      if (tipo === "credit")    
+        await user.send(`🎉 Você recebeu a sua recompensa da TimeWall! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.`);
+        console.log(`📨 DM enviada com sucesso para ${userIdLimpo}`);
+      } else if (tipo === "chargeback") {
+          await user.send(`😔 A TimeWall removeu do seu saldo **${sats} sats**! Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.\n A TimeWall verificou algo de errado em um saque teu anterior! Para prevenires, não uses vpns, nem AdBlockers`);
+        console.log(`📨 DM enviada com sucesso para ${userIdLimpo}`);
+      }
+    } catch (dmError) {
+      console.warn(`⚠️ Não foi possível enviar DM para ${userIdLimpo}: ${dmError.message}`);
     }
-  } catch (dmError) {
-    console.warn(`⚠️ Não foi possível enviar DM para ${userIdLimpo}: ${dmError.message}`);
-  }
 
   try {
-    if (definicoes.canalOfertas) {
+    if (definicoes.canalOfertas & tipo === "credit") {
       const canalOfertas = await client.channels.fetch(definicoes.canalOfertas);
       if (canalOfertas?.isTextBased()) {
         await canalOfertas.send(`🎉 <@${userIdLimpo}> recebeu **+${sats} sats** do TimeWall!`);
