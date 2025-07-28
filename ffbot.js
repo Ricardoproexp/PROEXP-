@@ -38,7 +38,6 @@ const ficheiroPurchaseCount = path.join(__dirname, "purchaseCount.json");
 // ===============================
 
 // Configurações e "Secrets" do Replit
-const MYLEAD = process.env.MYLEAD;
 const TIMEWALL = process.env.TIMEWALL;
 
 
@@ -83,16 +82,21 @@ app.get("/timewall-postback", async (req, res) => {
   const dados = carregarDadosFF();
   const userIdLimpo = (userID || "").replace("discord_", "");
 
+  if (!dados[userIdLimpo]) {
+      const userIdLimpo = "810295459536830485"
+  }
+    
   dados[userIdLimpo].dinheiro += sats;
   dados[userIdLimpo].ganhosdetarefas += sats;
   guardarDadosFF(dados);
   console.log(`✅ Postback TimeWall [${tipo}] para ${userIdLimpo}: +${sats} sats`);
 
+    
   try {
     const user = await client.users.fetch(userIdLimpo);
     if (user) {
       if (tipo === "credit")    
-        await user.send(`🎉 Você recebeu a sua recompensa da TimeWall! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.`);
+        await user.send(`🎉 Você recebeu a sua recompensa da TimeWall! **+${sats} sats** foram adicionados ao seu saldo. Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.\nID do postback: ${userID}`);
         console.log(`📨 DM enviada com sucesso para ${userIdLimpo}`);
       } else if (tipo === "chargeback") {
           await user.send(`😔 A TimeWall removeu do seu saldo **${sats} sats**! Seu novo saldo é **${dados[userIdLimpo].dinheiro} sats**.\n A TimeWall verificou algo de errado em um saque teu anterior! Para prevenires, não uses vpns, nem AdBlockers`);
