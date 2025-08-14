@@ -14,6 +14,21 @@ const crypto   = require("crypto");
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
+
+// =====================
+// Configuração do Cliente Discord
+// =====================
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.DirectMessages,
+    ],
+    partials: [Partials.Channel, Partials.Message],
+});
+
+
 // =====================
 // Caminhos dos Arquivos de Dados
 // =====================
