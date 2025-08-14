@@ -11,7 +11,6 @@ const crypto = require("crypto");
 // Configuração das Variáveis de Ambiente
 // =====================
 const TOKEN = process.env.TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID;
 const TIMEWALL = process.env.TIMEWALL;
 
 // =====================
@@ -46,20 +45,22 @@ const app = express();
 const PORT = 3001;
 
 app.get("/", (req, res) => {
-  res.status(200).send("Bot e Servidor de Postbacks estão online!");
+  res.status(200).send("Servidor de Postbacks está online!");
 });
 
 app.get("/timewall-postback", async (req, res) => {
   console.log("🔔 TimeWall postback recebido:", req.query);
   
-  const userID = req.query.userid;
+  // CORREÇÃO: Lógica de extração de parâmetros flexível, como no seu código original.
+  const userID = req.query.userid || req.query.userID || req.query.userId;
   const revenue = req.query.revenue;
-  const transactionID = req.query.transactionid;
+  const transactionID = req.query.transactionid || req.query.transactionID || req.query.transactionId;
   const hashRecebido = req.query.hash;
   const tipo = req.query.type;
   const currencyAmount = req.query.currencyAmount;
-
-  if (!userID || !revenue || !transactionID || !hashRecebido || !tipo || !currencyAmount) {
+  
+  // CORREÇÃO: Validação mais robusta e menos restritiva.
+  if (!userID || !revenue || !transactionID || !hashRecebido || !tipo || !currencyAmount || isNaN(parseFloat(revenue)) || isNaN(parseFloat(currencyAmount))) {
     console.error("❌ TimeWall: Parâmetros em falta ou inválidos.", req.query);
     return res.status(400).send("Missing or invalid parameters");
   }
@@ -111,7 +112,7 @@ client.on("ready", () => {
 });
 
 client.on("error", (error) => {
-    console.error("🚨 Erro na conexão com o Discord:", error);
+    console.error("🚨 Erro na conexão do cliente de postbacks:", error);
 });
 
 client.login(TOKEN);
