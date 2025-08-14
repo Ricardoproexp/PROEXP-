@@ -141,28 +141,31 @@ app.get("/timewall-postback", async (req, res) => {
   console.error("   - TransactionID:", transactionID);
   return res.status(403).send("Invalid hash");
   }
-  try {
-  const usd = currencyAmountUSD;
-  const userIdLimpo = (userID || "").replace("discord_", "");
-    
-  console.log(`✅ Postback TimeWall [${tipo}] para ${userIdLimpo}: +${usd} RL'$`);
 
   try {
-    if (definicoes.canalSeeOfertas && tipo === "credit") {
-      const canalSeeOfertas = await client.channels.fetch(definicoes.canalSeeOfertas);
-      if (canalSeeOfertas?.isTextBased()) {
-        await canalOfertas.send(`{userIdLimpo} +${usd} RL'$`);
-        console.log(`📢 Mensagem enviada para o canal de ofertas`);
-      } else if (definicoes.canalSeeOfertas && tipo === "chargeback") {
-          await canalOfertas.send(`{userIdLimpo} ${usd} RL'$`); 
+    const usd = currencyAmountUSD;
+    const userIdLimpo = (userID || "").replace("discord_", "");
+
+    console.log(`✅ Postback TimeWall [${tipo}] para ${userIdLimpo}: +${usd} RL'$`);
+
+    // Processar o postback
+    if (definicoes.canalSeeOfertas && tipo === "credit") {
+      const canalSeeOfertas = await client.channels.fetch(definicoes.canalSeeOfertas);
+      if (canalSeeOfertas?.isTextBased()) {
+        await canalSeeOfertas.send(`${userIdLimpo} ${usd}`);
+        console.log(`📢 Mensagem enviada para o canal de ofertas`);
+      }
+    } else if (definicoes.canalSeeOfertas && tipo === "chargeback") {
+      const canalSeeOfertas = await client.channels.fetch(definicoes.canalSeeOfertas);
+      if (canalSeeOfertas?.isTextBased()) {
+        await canalSeeOfertas.send(`${userIdLimpo} ${usd}`);
+      }
     }
+    return res.status(200).send("1");
+
   } catch (canalError) {
     console.warn("⚠️ Erro ao enviar no canal de ofertas:", canalError.message);
-  }
-  return res.status(200).send("1");
-} catch (err) {
-  console.error("❌ Erro ao processar o postback da TimeWall:", err);
-  return res.status(500).send("Processing error");
+    return res.status(500).send("Processing error");
   }
 });
 
